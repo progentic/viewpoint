@@ -1,0 +1,23 @@
+[project]
+name = "word-researcher-companion"
+version = "0.1.0"
+description = "Phase 1 local connectivity companion for Word Desktop"
+requires-python = ">=3.12"
+dependencies = [
+  "cryptography==50.0.0",
+  "fastapi==0.141.1",
+  "pydantic==2.13.4",
+  "uvicorn==0.52.1",
+]
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+pythonpath = ["src", ".."]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]

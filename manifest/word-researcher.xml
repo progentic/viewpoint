@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OfficeApp
+  xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:type="TaskPaneApp">
+  <Id>8f663f3f-80af-4f20-a32f-4a226f7671f5</Id>
+  <Version>1.0.0.0</Version>
+  <ProviderName>Word Researcher Phase 1</ProviderName>
+  <DefaultLocale>en-US</DefaultLocale>
+  <DisplayName DefaultValue="Word Researcher Feasibility" />
+  <Description DefaultValue="Verifies a trusted local Word Desktop companion connection." />
+  <IconUrl DefaultValue="https://word-researcher.localhost:4179/assets/icon.png" />
+  <SupportUrl DefaultValue="https://word-researcher.localhost:4179/support" />
+  <Hosts>
+    <Host Name="Document" />
+  </Hosts>
+  <Requirements>
+    <Sets DefaultMinVersion="1.3">
+      <Set Name="WordApi" MinVersion="1.3" />
+    </Sets>
+  </Requirements>
+  <DefaultSettings>
+    <SourceLocation DefaultValue="https://word-researcher.localhost:4179/taskpane" />
+  </DefaultSettings>
+  <Permissions>Restricted</Permissions>
+</OfficeApp>

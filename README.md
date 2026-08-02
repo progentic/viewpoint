@@ -1,4 +1,6 @@
-# "ViewPoint" - Researcher for Microsoft Word Desktop
+# Viewpoint — Researcher for Microsoft Word Desktop
+
+**Viewpoint** is the project codename and is not the final product name.
 
 Architecture contract for a local-only research assistant add-in.
 

@@ -1,0 +1,44 @@
+:root {
+  color: #17212b;
+  background: #f7f8fa;
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+body {
+  margin: 0;
+}
+
+.status {
+  border-left: 4px solid #637083;
+  margin: 24px;
+  padding: 4px 20px 20px;
+}
+
+.status--connected {
+  border-color: #16833b;
+}
+
+.status--unavailable {
+  border-color: #b45100;
+}
+
+.status--unsupported {
+  border-color: #a4262c;
+}
+
+.eyebrow {
+  color: #556273;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+h1 {
+  font-size: 22px;
+  margin: 8px 0;
+}
+
+p {
+  line-height: 1.5;
+}
