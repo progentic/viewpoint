@@ -4,8 +4,10 @@
 
 Architecture contract for a local-only research assistant add-in.
 
-Status: **conditional go**. The Phase 0 contracts in this package must be implemented
-before feature work begins.
+Status: **DISCONTINUED**. The selected Word add-in and native companion architecture did
+not pass the cross-platform session feasibility gate within the available budget. See
+[PROJECT_STATUS.md](PROJECT_STATUS.md) for the final decision. Do not continue
+implementation on the current architecture.
 
 ## Product flow
 
@@ -23,8 +25,9 @@ V1 runs entirely on the user's Windows or macOS computer:
   application-data directory.
 - Local worker processes perform PDF extraction, OCR, indexing, and analysis outside
   Word's task-pane process.
-- The only application-data egress is an explicit, researcher-initiated call through a
-  Microsoft AI validation adapter. It receives only the previewed validation payload.
+- The only later application-data egress is an explicit, researcher-initiated `analysis`
+  or `research` operation through `MicrosoftAiGateway`. It receives only the approved,
+  previewed disclosure payload.
 
 Word on the web, mobile Word, multi-user collaboration, tenants, Postgres, S3, hosted
 workers, and Marketplace distribution are not v1 targets.
@@ -54,6 +57,5 @@ request hosts no application code or research data.
 - [Roadmap](docs/ROADMAP.md)
 - [Verification](docs/VERIFICATION.md)
 
-Application code, installers, and CI are Phase 1 deliverables. The original archive
-listed `.github/workflows/ci.yml`, but that file is not present; its required contract is
-specified in the roadmap and verification documents.
+Phase 1 implementation and evidence live in [phase1](phase1/README.md). Phase 1 remains
+blocked, and Phase 2 did not start. The repository is preserved for reference only.
