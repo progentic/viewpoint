@@ -1,13 +1,13 @@
 # Configuration contract and examples
 
-This document describes typed configuration to be implemented later; it is not an
-installer, secret file, or generated schema. Production configuration is written by the
-managed companion installer. Domain modules receive narrow values from the composition
+This document describes typed configuration that a later phase will implement. It is not
+an installer, secret file, or generated schema. The managed installer for the local
+companion writes production configuration. Domain modules receive narrow values from the composition
 root and do not import global settings.
 
-## Task-pane bootstrap
+## Task pane bootstrap
 
-The companion may expose only non-secret capabilities:
+The companion can expose only non-secret capabilities:
 
 ```json
 {
@@ -30,13 +30,26 @@ Illustrative typed YAML spelling:
 ```yaml
 configurationVersion: 1
 
+bootstrap:
+  policyVersion: 1
+  allowMissingOriginProfiles:
+    - word-macos-wkwebview
+  profiles:
+    word-macos-wkwebview:
+      host: localhost:4179
+      method: POST
+      path: /api/v1/session/bootstrap
+      secFetchSite: same-origin
+      secFetchMode: cors
+      secFetchDest: empty
+  sessionLifetimeSeconds: 900
+
 loopback:
-  hostname: word-researcher.localhost
+  hostname: localhost
   port: 4179
   bindAddresses: [127.0.0.1]
-  exactOrigin: https://word-researcher.localhost:4179
+  exactOrigin: https://localhost:4179
   certificateReference: researcher-loopback-leaf
-  sessionLifetimeSeconds: 900
   cookie:
     secure: true
     httpOnly: true
@@ -124,6 +137,10 @@ digests before Phase 3 import/indexing begins.
 The listener never substitutes `0.0.0.0`, a wildcard hostname, or another free port. IPv6
 `::1` is added only if Phase 1 proves identical host, cookie, and certificate behavior.
 
+The `empty` configuration value is the literal Fetch Metadata value. A missing header
+does not match this value. The bootstrap policy contains no secret, identity token, or
+Word attestation value.
+
 ## Azure provisioning contract
 
 Analysis and Research use Azure OpenAI in Microsoft Foundry's stable Responses API:
@@ -136,18 +153,18 @@ The API supports API-key and Microsoft Entra authentication
 ([Responses REST reference](https://learn.microsoft.com/en-us/rest/api/microsoft-foundry/azureopenai/responses)).
 V1 selects an API key stored in Windows Credential Manager or macOS Keychain and sends it
 only in the `api-key` header. The supported Entra alternative uses an
-`Authorization: Bearer` header; it is not enabled merely by changing a string because it
-requires a separately designed sign-in, token-cache, scope, expiration, and sign-out flow.
+`Authorization: Bearer` header. A string change does not enable this alternative. It
+requires a separate sign-in, token-cache, scope, expiration, and sign-out flow.
 
 Before enabling either operation, the organization must provide:
 
-- an Azure subscription and billed Azure OpenAI resource;
-- quota and a supported region/deployment type;
-- two deployments pinned to `gpt-5` version `2025-08-07` (names may differ locally);
-- `web_search` enabled for the Research deployment/subscription;
-- the exact resource host and API key credential reference;
-- product/organizational approval for the retention, abuse-monitoring, cost, and Research
-  compliance notices.
+- An Azure subscription and billed Azure OpenAI resource
+- Quota and a supported region and deployment type
+- Two deployments pinned to `gpt-5` version `2025-08-07`
+- Local deployment names that can differ
+- An enabled `web_search` capability for the Research deployment and subscription
+- The exact resource host and API key credential reference
+- Product and organizational approval for the retention, abuse-monitoring, cost, and Research compliance notices
 
 The deployment evidence, not a user-editable label, proves the base model/version. A
 model, deployment, endpoint, region, tool, or notice change disables the affected
@@ -155,7 +172,7 @@ operation until it is reprobed and redisclosed.
 
 ## Analysis request body
 
-Analysis uses no tool and receives only material selected in the local UI. The semantic
+Analysis uses no tool and receives only material selected in the local user interface (UI). The semantic
 body is:
 
 ```json
@@ -188,7 +205,7 @@ body is:
 }
 ```
 
-The real body contains a JSON Schema object, never the placeholder string. The disclosure
+The real body contains a JavaScript Object Notation (JSON) Schema object, never the placeholder string. The disclosure
 screen renders the full field-for-field payload, including that schema, as the exact
 RFC 8785 canonical bytes that will be sent. It also renders the SHA-256 digest.
 
@@ -249,9 +266,9 @@ discoveries[]: {title, url, citedPassage?, advisorySummary}
 limitations[]: string
 ```
 
-The adapter also requires a completed `web_search_call`, parses output arrays by `type`
-rather than position, validates source URLs and citation annotations, and reconciles them
-with the structured discoveries. No tool call or invalid citations means `failed`, not a
+The adapter also requires a completed `web_search_call`. It parses output arrays by
+`type`, not position. It validates source URLs and citation annotations. It then
+reconciles them with the structured discoveries. No tool call or invalid citations means `failed`, not a
 tool-free success. Microsoft documents `web_search` and its response/citation form in the
 [stable web-search guidance](https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/web-search).
 
@@ -259,32 +276,32 @@ tool-free success. Microsoft documents `web_search` and its response/citation fo
 
 Every Analysis preview states:
 
-- the exact selected text and metadata leaving the device;
-- the Azure resource host, deployment, model/version, absence of tools, and hard bounds;
-- that Azure charges can apply for input/output usage;
-- that `store: false` disables response-history storage but does not justify a zero-
-  retention claim, because applicable abuse monitoring can process flagged content;
-- that one click authorizes one attempt and no automatic retry occurs.
+- The exact selected text and metadata that leave the device
+- The Azure resource host, deployment, model, version, absence of tools, and hard bounds
+- The Azure charges that can apply to input and output usage
+- The rule that `store: false` does not justify a zero-retention claim
+- The applicable abuse monitoring that can process flagged content
+- The rule that one confirmation authorizes one attempt without automatic retry
 
 Every Research preview additionally states:
 
-- the exact query and optional selected context;
-- that `web_search` is used and tool-call charges can apply;
-- that Grounding with Bing Search is a separate external processing path;
-- Microsoft's statement that its Data Protection Addendum does not apply to this search
-  data and it can flow outside the compliance/geographic boundary.
+- The exact query and optional selected context
+- The use of `web_search` and the possible tool-call charges
+- The separate external processing path for Grounding with Bing Search
+- Microsoft's statement that its Data Protection Addendum does not apply to this search data
+- Microsoft's statement that processing can cross the compliance or geographic boundary
 
 These Research disclosures are required by Microsoft's
 [web-search guidance](https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/web-search).
-Microsoft's data document describes flagged prompt/completion handling for abuse
-monitoring, so the UI says “nonpersistent request,” never “zero retention”
-([data, privacy, and security](https://learn.microsoft.com/en-us/azure/foundry/responsible-ai/openai/data-privacy)).
+Microsoft's data document describes abuse monitoring for flagged prompts and
+completions. Therefore, the UI says “nonpersistent request,” never “zero retention.” See
+Microsoft's [data, privacy, and security guidance](https://learn.microsoft.com/en-us/azure/foundry/responsible-ai/openai/data-privacy).
 
 ## Credential and path policy
 
 The Azure API key and installer bootstrap credential live only in Keychain or Credential
 Manager. SQLite stores credential reference names. The companion retrieves the Azure key
-only while executing a consumed consent; it never logs or returns it.
+only while executing a consumed consent. It never logs or returns the key.
 
 Platform adapters resolve the database file, content directory, temporary directory,
 certificate references, and credential references. Persisted domain records contain
@@ -292,11 +309,11 @@ opaque IDs and hashes, not user-specific paths.
 
 ## Development-only environment example
 
-An eventual `.env.example` may document local development values but cannot contain a
+An eventual `.env.example` can document local development values but cannot contain a
 secret and is not production configuration:
 
 ```dotenv
-LOOPBACK_HOST=word-researcher.localhost
+LOOPBACK_HOST=localhost
 LOOPBACK_PORT=4179
 AZURE_OPENAI_RESOURCE_HOST=example-resource.openai.azure.com
 AZURE_OPENAI_ANALYSIS_DEPLOYMENT=researcher-analysis

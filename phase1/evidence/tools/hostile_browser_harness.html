@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Phase 1 hostile-browser harness</title>
+  </head>
+  <body>
+    <main>
+      <h1>Phase 1 hostile-browser harness</h1>
+      <p id="origin"></p>
+      <ol id="results"></ol>
+      <iframe name="navigation-target" hidden></iframe>
+    </main>
+    <script type="module">
+      const bootstrapUrl = "https://localhost:4179/api/v1/session/bootstrap";
+      const results = document.querySelector("#results");
+
+      document.querySelector("#origin").textContent = `Harness origin: ${location.origin}`;
+
+      async function expectBrowserRejection(label, request) {
+        try {
+          const response = await fetch(bootstrapUrl, request);
+          record(label, response.ok ? "FAIL: accepted" : `PASS: HTTP ${response.status}`);
+        } catch (error) {
+          record(label, "PASS: blocked by browser or companion");
+        }
+      }
+
+      function record(label, result) {
+        const item = document.createElement("li");
+        item.textContent = `${label}: ${result}`;
+        results.append(item);
+      }
+
+      function submitCrossOriginForm() {
+        const form = document.createElement("form");
+        form.method = "post";
+        form.action = bootstrapUrl;
+        form.target = "navigation-target";
+        document.body.append(form);
+        form.submit();
+        form.remove();
+        record("cross-origin form post", "SENT: inspect categorical companion rejection");
+      }
+
+      function navigateWithoutBootstrapProfile() {
+        document.querySelector("[name='navigation-target']").src = bootstrapUrl;
+        record("browser navigation", "SENT: inspect categorical companion rejection");
+      }
+
+      await expectBrowserRejection("foreign simple fetch", {
+        method: "POST",
+        mode: "cors",
+        credentials: "omit",
+        headers: { "Content-Type": "text/plain" },
+        body: "{}",
+      });
+
+      await expectBrowserRejection("foreign preflighted fetch", {
+        method: "POST",
+        mode: "cors",
+        credentials: "omit",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Browser-Probe": "phase1",
+        },
+        body: "{}",
+      });
+
+      submitCrossOriginForm();
+      navigateWithoutBootstrapProfile();
+    </script>
+  </body>
+</html>

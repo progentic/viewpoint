@@ -1,20 +1,22 @@
 # Invariants
 
 These rules are normative. SQLite constraints, domain services, loopback guards, adapter
-boundaries, packaging checks, and automated tests enforce them. A task-pane check alone
+boundaries, packaging checks, and automated tests enforce them. A task pane check alone
 never establishes an invariant. If another document conflicts with this file, the other
 document must change.
 
 ## 1. Application research data is local by default
 
-The add-in and companion have no hosted backend, telemetry collector, remote database,
-remote object store, cloud queue, or remote index. PDFs, extracted text, rendered pages,
-embeddings, indexes, SQLite, artifacts, and Word content stay on-device unless the user
-approves the exact selected payload for one Microsoft AI operation.
+The add-in and local companion have no hosted application infrastructure, telemetry collector, remote database,
+remote object store, cloud queue, or remote index. Application research data stays on the
+device by default. This data includes Portable Document Format (PDF) files, text, pages,
+and embeddings. It also includes indexes, SQLite, artifacts, and Word content. One
+Microsoft artificial intelligence (AI) operation can send only the exact approved
+payload.
 
-This promise covers only transmissions performed by the add-in and companion. Word may
+This promise covers only transmissions performed by the add-in and companion. Word can
 independently use OneDrive, SharePoint, AutoSave, or connected experiences. Office.js is a
-required production-CDN dependency and carries no application research payload.
+required production content delivery network (CDN) dependency and carries no application research payload.
 
 ## 2. SQLite and the content store are authoritative
 
@@ -29,28 +31,37 @@ and deletion cover both authoritative stores.
 
 Suggestions, `ReviewInspection`, `ReviewDecision`, claim revisions, AI disclosure/
 consent/events/results, and artifact snapshots are immutable and append-only while a
-project exists. A complete, explicitly confirmed project deletion may purge the project,
-its content, and its audit history. UI deletion of one item cannot rewrite history.
+project exists. A complete, explicitly confirmed project deletion can purge the project,
+its content, and its audit history. User-interface (UI) deletion of one item cannot rewrite history.
 
-## 4. The companion is a hardened loopback service
+## 4. The companion is hardened for loopback access
 
 The companion binds only to approved loopback addresses at the installer-owned stable
-origin. It rejects unexpected `Host`, `Origin`, Fetch Metadata, session, and CSRF values.
+origin. It rejects unexpected `Host`, `Origin`, Fetch Metadata, session, and cross-site request forgery (CSRF) values.
+The bootstrap endpoint can accept an absent `Origin` only for a real Word Desktop
+embedded-host profile that Phase 1 verified. An unexpected `Origin` always fails.
 Every mutation requires a short-lived `Secure`, `HttpOnly`, `SameSite=Strict` session
 cookie plus a separate session-bound CSRF token.
 
+The product does not cryptographically authenticate Word as a client. The local
+operating-system user account is the v1 trust boundary. A same-user native process,
+malicious browser extension, or compromised user profile can imitate local request
+context. These threats are outside the v1 browser-origin boundary.
+
 Each installation has unique certificate/key material constrained to the loopback
-hostname. Private keys and durable installation credentials are OS-protected and never
-enter SQLite, logs, the manifest, browser storage, or task-pane JavaScript. Renewal,
+hostname. Private keys and durable installation credentials are operating-system-protected and never
+enter SQLite, logs, the manifest, browser storage, or task pane JavaScript. Renewal,
 rotation, rollback, revocation, repair, and uninstall cleanup are required behaviors.
 
 ## 5. Production support requires real cross-platform evidence
 
 Development sideloading is not production distribution. V1's candidate production route
-is administrator deployment of the XML manifest plus separately managed installation of
-the companion. It is not called supported or production-ready until Phase 1 proves the
-loopback manifest source, trust/bootstrap behavior, WebView2/WKWebView behavior, repair,
-and uninstall in supported Windows and macOS Word Desktop environments.
+is administrator deployment of the Extensible Markup Language (XML) manifest plus separately managed installation of
+the companion. The product must not claim production readiness before Phase 1 passes.
+Phase 1 must prove the manifest source, trust, bootstrap, webview behavior, repair, and
+uninstall on both supported platforms before release. Phase 2 platform-neutral work can
+start after the conditional Phase 1 gate in `ROADMAP.md` passes. Windows release support
+remains provisional until the real Windows Word Desktop matrix passes.
 
 The manifest does not enforce an operating-system restriction. The task pane rejects Word
 on the web, mobile, non-Word hosts, missing companions, and hosts lacking the baseline.
@@ -64,8 +75,8 @@ StudyFindingRevision -> ReviewDecision -> Suggestion -> SourceSpan
     -> TextLayerPage -> ExtractionVersion -> Paper.pdfHash
 ```
 
-`pageIndex` is zero-based and separate from displayed `pageLabel`. PDF hash, extraction
-version, parser/OCR identity, page values, offsets, exact text, and
+`pageIndex` is zero-based and separate from displayed `pageLabel`. Portable Document Format (PDF) hash, extraction
+version, parser and optical character recognition (OCR) identity, page values, offsets, exact text, and
 `pageTextChecksum` are required. A valid span satisfies:
 
 ```text
@@ -92,17 +103,17 @@ Bulk acceptance and automatic acceptance are forbidden.
 ## 8. Review decisions are deterministically ordered
 
 `ReviewDecision.sequence` starts at 1 and increases by one for its suggestion. The first
-has no `supersedesDecisionId`; each later decision points to the current prior decision.
+has no `supersedesDecisionId`. Each later decision points to the current prior decision.
 The append and head check are atomic. A stale predecessor or sequence returns
 `409 Conflict`.
 
-Original suggestion text remains immutable. Human edits live in `reviewedText`; source
+Original suggestion text remains immutable. Human edits live in `reviewedText`. Source
 spans are never rewritten to make edited prose appear verbatim.
 
 ## 9. Microsoft AI has two narrow advisory operations
 
-Only `MicrosoftAiGateway` may make application-data network calls. V1 operation types are
-`analysis` and `research`; validation is an Analysis purpose. Their shared status
+`MicrosoftAiGateway` is the only component permitted to send application data off-device. V1 operation types are
+`analysis` and `research`. Validation is an Analysis purpose. Their shared status
 vocabulary is:
 
 ```text
@@ -114,8 +125,9 @@ receives only its approved query and optional selected context. Neither receives
 SQLite/index data, local paths, credentials, unrelated findings, or undisclosed Word
 content.
 
-AI cannot accept evidence, write an inspection or decision, approve a synthesis claim,
-substantiate/reject a gap, create an insertable artifact without review, or mutate Word.
+AI cannot accept evidence or write an inspection or decision. AI cannot approve a
+synthesis claim or decide a gap. AI cannot create an insertable artifact without review.
+AI cannot mutate Word.
 Local workflows remain available when AI is not configured or unavailable.
 
 ## 10. Every remote attempt consumes exact one-use consent
@@ -126,53 +138,55 @@ bound to operation/type, digest, exact endpoint, deployment/base model and versi
 selection, disclosure version, notices, and expiry. Execution recreates the bytes and
 rejects any mismatch.
 
-The gateway permits only the configured exact Azure OpenAI host, rejects redirects,
-disables environment-proxy inheritance, verifies TLS, enforces input/token/response/time
-bounds, makes one attempt, and validates structured output locally. A retry requires a new
-preview and consent. Disclosed fields and the result/failure are stored locally.
+The gateway permits only the configured exact Azure OpenAI host. It rejects redirects and
+disables environment-proxy inheritance. It verifies Transport Layer Security (TLS) and
+enforces all configured bounds. It makes one attempt and validates structured output
+locally. A retry requires a new preview and consent. Local storage records disclosed
+fields and the result or failure.
 
 ## 11. Remote processing is nonpersistent, not “zero retention”
 
 Every Azure OpenAI Responses API request sets `store: false`. V1 forbids response chaining,
-conversations, remote files/vector stores, file search, Assistants, batches, stored
-responses/completions, background mode, code interpreter, MCP, and other remote state.
+conversations, remote files, vector stores, file search, Assistants, and batches. It also
+forbids stored responses, background mode, code interpreter, Model Context Protocol (MCP),
+and other remote state.
 Context management, prompt-cache control fields, and encrypted-reasoning carryover are
 also forbidden.
 
-Every consent says Microsoft may process prompts/completions for abuse monitoring under
+Every consent says Microsoft can process prompts and completions for abuse monitoring under
 the resource's applicable configuration. The product never promises zero retention.
 Research consent separately discloses web-search tool cost, external processing, and
-Microsoft's stated DPA and geographic/compliance-boundary limitations.
+Microsoft's stated Data Protection Addendum (DPA) and geographic/compliance-boundary limitations.
 
 ## 12. Research discoveries are not evidence
 
-An Azure `web_search` result becomes only a local `ResearchDiscovery`. Before it supports
-a finding or claim, the researcher acquires the cited source, imports it into the local
-corpus, establishes exact provenance, and accepts it through normal review. A URL or model
+An Azure `web_search` result becomes only a local `ResearchDiscovery`. Before a discovery
+supports a finding or claim, the researcher must acquire its cited source. The researcher
+must import and review the source through the normal provenance workflow. A uniform resource locator (URL) or model
 summary alone cannot become evidence.
 
 ## 13. Synthesis is multi-paper
 
 A `StudyFindingRevision` belongs to one `paperId`. Every approved
 `SynthesisClaimRevision` references accepted findings from at least two distinct
-`paperId` values through typed `EvidenceLink` records. There is no single-study exception;
-a one-paper boundary observation remains a finding.
+`paperId` values through typed `EvidenceLink` records. There is no single-study exception.
+A one-paper boundary observation remains a finding.
 
 Only a researcher approves a claim, comparison, research question, or gap conclusion.
 
 ## 14. Gap conclusions are corpus-bounded
 
 A gap test searches every eligible, successfully indexed revision recorded in one
-immutable `CorpusSnapshot`; exclusions and failures are also recorded. The snapshot pins
+immutable `CorpusSnapshot`. The snapshot also records exclusions and failures. The snapshot pins
 query, filters, `LocalEmbeddingProfile`, index version, and time.
 
-Successful search reaches only `corpusSearched`. Only the researcher may append
-`researcherSubstantiated` or `rejected`. Product language never equates a local corpus
+Successful search reaches only `corpusSearched`. The researcher is the only actor
+permitted to append `researcherSubstantiated` or `rejected`. Product language never equates a local corpus
 search with proof about the wider literature.
 
 ## 15. V1 embeds locally and does not generate locally
 
-V1 packages a pinned offline `sentence-transformers/all-MiniLM-L6-v2` ONNX model and
+V1 packages a pinned offline `sentence-transformers/all-MiniLM-L6-v2` Open Neural Network Exchange (ONNX) model and
 tokenizer for embeddings only. Their upstream revision, license, and SHA-256 digests are
 recorded and verified before import/indexing. Runtime model download and remote embedding
 calls are forbidden. V1 packages no local generative model and makes no local-generative
@@ -182,10 +196,10 @@ suggestion claim.
 
 `POST /papers` atomically creates and enqueues one local job, returning `202 Accepted`
 with `paperId` and `jobId`. A project-scoped idempotency key is bound to the PDF hash and
-canonical import parameters. Identical replay returns the original IDs; the same key with
+canonical import parameters. Identical replay returns the original IDs. The same key with
 different bytes or parameters returns `409 Conflict`.
 
-Jobs/checkpoints survive restart. Retry and cancel are explicit recorded transitions; no
+Jobs and checkpoints survive restart. Retry and cancel are explicit recorded transitions. No
 hidden retry or second parse-start endpoint exists.
 
 ## 17. Artifact snapshots are immutable and plural-sourced
@@ -207,12 +221,12 @@ Evidence, credentials, local paths, and artifact content are forbidden in settin
 
 ## 19. Production Office.js is stable and capability-gated
 
-Task-pane HTML loads Office.js from Microsoft's production CDN in `<head>` and does not
+Task pane HyperText Markup Language (HTML) loads Office.js from Microsoft's production CDN in `<head>` and does not
 bundle it. Stable `WordApi 1.3` is the baseline. Preview CDN URLs, preview type packages,
 and unguarded use of newer APIs fail verification.
 
 ## 20. OpenAPI is the loopback contract
 
 Pydantic models produce deterministic OpenAPI 3.1. TypeScript loopback types and the
-client are generated from it; hand-maintained cross-stack mirrors are forbidden. A
+client are generated from it. Hand-maintained cross-stack mirrors are forbidden. A
 regeneration dirty diff fails verification.

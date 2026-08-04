@@ -2,13 +2,16 @@
 
 ## Conventions
 
+Use these domain conventions:
+
 - IDs are opaque, stable, locally generated values.
-- Times are UTC instants; display localization is presentation-only.
+- Times are Coordinated Universal Time (UTC) instants.
+- Display localization is presentation-only.
 - Revisions and audit records are immutable and append-only while their project exists.
-- `pageIndex` is zero-based extraction order. `pageLabel` is the independent displayed
-  label printed or encoded by the document.
+- `pageIndex` is zero-based extraction order.
+- `pageLabel` is the independent displayed label printed or encoded by the document.
 - Status vocabularies are closed enums, not free text.
-- A complete, confirmed project deletion may purge the project's records and content.
+- A complete, confirmed project deletion can purge the project's records and content.
 
 ## Project, paper, and extraction
 
@@ -94,11 +97,11 @@ extractionVersionId, pageIndex, pageTextChecksum,
 renderedPageDigest, presentationDigest, presentedAt, confirmedAt
 ```
 
-Each record covers one suggestion and one source span only. Creation requires the
-companion to verify the span, serve the matching rendered page and extraction version,
-hash the canonical descriptor of the page/span/suggestion presentation, and receive a
-distinct researcher confirmation while that exact item is displayed. It is evidence of
-presentation and explicit confirmation, not proof of attention or agreement.
+Each record covers one suggestion and one source span only. The local companion verifies the
+span before creation. It serves the matching rendered page and extraction version. It
+hashes the canonical presentation descriptor. The researcher then confirms the displayed
+item. The record proves presentation and explicit confirmation. It does not prove
+attention or agreement.
 
 An accepting decision references a current-session inspection for every source span it
 uses. A record for a different suggestion, span, extraction version, checksum, or session
@@ -112,7 +115,7 @@ reviewedText?, reviewInspectionIds[], createdAt
 ```
 
 `decision = accepted | rejected`. Sequence starts at 1 and increases by exactly one per
-suggestion. Sequence 1 has no superseded decision; every later decision points to the
+suggestion. Sequence 1 has no superseded decision. Every later decision points to the
 current prior decision. The companion appends this using one SQLite transaction and
 returns `409 Conflict` for a stale head or sequence. `reviewedText` never changes the
 suggestion or its provenance span.
@@ -125,7 +128,7 @@ reviewDecisionId, reviewedText, sourceSpanIds[], sequence, createdAt
 ```
 
 A finding derives from one accepted suggestion and one `paperId`. A new human decision
-creates a new revision; it does not rewrite prior evidence.
+creates a new revision. It does not rewrite prior evidence.
 
 ## Synthesis
 
@@ -157,7 +160,7 @@ status, createdAt
 ```
 
 Rows trace every value to accepted finding revisions. `status = draft | approved |
-superseded`; approval is human.
+superseded`. Only a researcher approves a comparison.
 
 ### `ResearchQuestionRevision`
 
@@ -210,7 +213,7 @@ cancelled`. A successful local search reaches only `corpusSearched`. Only a rese
 append the substantiated or rejected revision. The conclusion is scoped to its snapshot,
 not the wider literature.
 
-## Microsoft AI operations
+## Microsoft artificial intelligence (AI) operations
 
 ### Closed vocabularies
 
@@ -345,5 +348,5 @@ content-control tag reconcile ambiguous local recording failures without reinser
 
 An import key is scoped to a project and bound to `pdfHash` plus the canonical import
 parameters digest. Identical replay returns the original `paperId` and `jobId`. Reusing
-the same key with different PDF bytes or parameters returns `409 Conflict`; it never
+the same key with different Portable Document Format (PDF) bytes or parameters returns `409 Conflict`. The companion never
 silently deduplicates or starts a second job.
