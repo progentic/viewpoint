@@ -9,8 +9,8 @@
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="Word Researcher Feasibility" />
   <Description DefaultValue="Verifies a trusted local Word Desktop companion connection." />
-  <IconUrl DefaultValue="https://word-researcher.localhost:4179/assets/icon.png" />
-  <SupportUrl DefaultValue="https://word-researcher.localhost:4179/support" />
+  <IconUrl DefaultValue="https://localhost:4179/assets/icon.png" />
+  <SupportUrl DefaultValue="https://localhost:4179/support" />
   <Hosts>
     <Host Name="Document" />
   </Hosts>
@@ -20,7 +20,7 @@
     </Sets>
   </Requirements>
   <DefaultSettings>
-    <SourceLocation DefaultValue="https://word-researcher.localhost:4179/taskpane" />
+    <SourceLocation DefaultValue="https://localhost:4179/taskpane" />
   </DefaultSettings>
   <Permissions>Restricted</Permissions>
 </OfficeApp>

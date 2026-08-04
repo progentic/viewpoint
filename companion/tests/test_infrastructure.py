@@ -71,9 +71,31 @@ def test_installation_secret_is_generated_in_credential_store() -> None:
     assert len(first) >= 32
 
 
+def test_missing_installation_secret_fails_closed() -> None:
+    service = InstallationSecretService(InMemoryCredentialStore())
+
+    with pytest.raises(RuntimeError, match="installer repair"):
+        service.load()
+
+
+def test_invalid_stored_installation_secret_fails_closed() -> None:
+    store = InMemoryCredentialStore()
+    store.set("WordResearcher.Phase1", "installation-secret", "too-short")
+
+    with pytest.raises(RuntimeError, match="reinstall"):
+        InstallationSecretService(store).load()
+
+
+def test_invalid_installation_secret_is_rejected_by_session_boundary(companion_settings) -> None:
+    from researcher_companion.api.app import create_app
+
+    with pytest.raises(ValueError, match="at least 32 bytes"):
+        create_app(companion_settings, b"too-short")
+
+
 def test_tls_material_is_unique_and_scoped_to_stable_hostname(tmp_path: Path) -> None:
-    first = PerInstallTlsProvisioner(tmp_path / "first", "word-researcher.localhost").provision()
-    second = PerInstallTlsProvisioner(tmp_path / "second", "word-researcher.localhost").provision()
+    first = PerInstallTlsProvisioner(tmp_path / "first", "localhost").provision()
+    second = PerInstallTlsProvisioner(tmp_path / "second", "localhost").provision()
     first_certificate = x509.load_pem_x509_certificate(first.server_certificate.read_bytes())
     second_certificate = x509.load_pem_x509_certificate(second.server_certificate.read_bytes())
 
@@ -81,7 +103,7 @@ def test_tls_material_is_unique_and_scoped_to_stable_hostname(tmp_path: Path) ->
         hashes.SHA256()
     )
     names = first_certificate.extensions.get_extension_for_class(x509.SubjectAlternativeName).value
-    assert names.get_values_for_type(x509.DNSName) == ["word-researcher.localhost"]
+    assert names.get_values_for_type(x509.DNSName) == ["localhost"]
     assert os.stat(first.server_private_key).st_mode & 0o777 == 0o600
 
 

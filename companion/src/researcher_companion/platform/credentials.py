@@ -2,11 +2,13 @@ import ctypes
 import os
 import secrets
 import sys
+from collections.abc import Callable, Sequence
 from ctypes import wintypes
-from typing import Protocol
+from typing import Protocol, cast
 
 CREDENTIAL_SERVICE = "WordResearcher.Phase1"
 CREDENTIAL_ACCOUNT = "installation-secret"
+MINIMUM_SECRET_BYTES = 32
 
 
 class CredentialStore(Protocol):
@@ -24,10 +26,10 @@ class InstallationSecretService:
     def ensure(self) -> bytes:
         existing = self._store.get(CREDENTIAL_SERVICE, CREDENTIAL_ACCOUNT)
         if existing is not None:
-            return existing.encode()
+            return validate_installation_secret(existing)
         generated = secrets.token_urlsafe(48)
         self._store.set(CREDENTIAL_SERVICE, CREDENTIAL_ACCOUNT, generated)
-        return generated.encode()
+        return validate_installation_secret(generated)
 
     def load(self) -> bytes:
         value = self._store.get(CREDENTIAL_SERVICE, CREDENTIAL_ACCOUNT)
@@ -35,7 +37,7 @@ class InstallationSecretService:
             raise RuntimeError(
                 "Installation secret is missing; run the local installer repair command"
             )
-        return value.encode()
+        return validate_installation_secret(value)
 
     def delete(self) -> None:
         self._store.delete(CREDENTIAL_SERVICE, CREDENTIAL_ACCOUNT)
@@ -126,7 +128,10 @@ class MacOSKeychainCredentialStore:
     def _return_data_pairs(self) -> list[tuple[int, int]]:
         return [(self._constant("kSecReturnData"), self._cf_constant("kCFBooleanTrue"))]
 
-    def _dictionary(self, pairs: list[tuple[int, int]]) -> ctypes.c_void_p:
+    def _dictionary(
+        self,
+        pairs: Sequence[tuple[int, int | ctypes.c_void_p]],
+    ) -> ctypes.c_void_p:
         dictionary = self._core_foundation.CFDictionaryCreateMutable(
             None,
             0,
@@ -154,10 +159,16 @@ class MacOSKeychainCredentialStore:
         return ctypes.string_at(pointer, length)
 
     def _constant(self, name: str) -> int:
-        return ctypes.c_void_p.in_dll(self._security, name).value
+        return self._require_pointer(ctypes.c_void_p.in_dll(self._security, name).value, name)
 
     def _cf_constant(self, name: str) -> int:
-        return ctypes.c_void_p.in_dll(self._core_foundation, name).value
+        value = ctypes.c_void_p.in_dll(self._core_foundation, name).value
+        return self._require_pointer(value, name)
+
+    def _require_pointer(self, value: int | None, name: str) -> int:
+        if value is None:
+            raise RuntimeError(f"macOS security symbol is unavailable: {name}")
+        return value
 
     def _callback_address(self, name: str) -> ctypes.c_void_p:
         symbol = ctypes.c_byte.in_dll(self._core_foundation, name)
@@ -249,9 +260,15 @@ class CredentialW(ctypes.Structure):
 class WindowsCredentialStore:
     GENERIC_CREDENTIAL = 1
     LOCAL_MACHINE_PERSISTENCE = 2
+    ELEMENT_NOT_FOUND = 1168
 
     def __init__(self) -> None:
-        self._advapi32 = ctypes.WinDLL("Advapi32.dll")
+        windows_dll = getattr(ctypes, "WinDLL", None)
+        last_error = getattr(ctypes, "get_last_error", None)
+        if windows_dll is None or last_error is None:
+            raise RuntimeError("Windows Credential Manager is unavailable")
+        self._get_last_error = cast(Callable[[], int], last_error)
+        self._advapi32 = windows_dll("Advapi32.dll", use_last_error=True)
         self._configure_functions()
 
     def get(self, service: str, account: str) -> str | None:
@@ -261,6 +278,7 @@ class WindowsCredentialStore:
             service, self.GENERIC_CREDENTIAL, 0, ctypes.byref(credential_pointer)
         )
         if not found:
+            self._raise_or_return_missing("read")
             return None
         try:
             return self._decode_blob(credential_pointer.contents)
@@ -276,7 +294,18 @@ class WindowsCredentialStore:
 
     def delete(self, service: str, account: str) -> None:
         del account
-        self._advapi32.CredDeleteW(service, self.GENERIC_CREDENTIAL, 0)
+        deleted = self._advapi32.CredDeleteW(service, self.GENERIC_CREDENTIAL, 0)
+        if not deleted:
+            self._raise_or_return_missing("delete")
+
+    def _raise_or_return_missing(self, operation: str) -> None:
+        error_code = self._get_last_error()
+        if error_code == self.ELEMENT_NOT_FOUND:
+            return
+        raise RuntimeError(
+            f"Windows Credential Manager could not {operation} installation material "
+            f"(WinError {error_code})"
+        )
 
     def _create_credential(
         self,
@@ -338,3 +367,10 @@ def current_credential_store() -> CredentialStore:
     if os.name == "nt":
         return WindowsCredentialStore()
     raise RuntimeError("Phase 1 credential storage supports only macOS and Windows")
+
+
+def validate_installation_secret(value: str) -> bytes:
+    encoded = value.encode()
+    if len(encoded) < MINIMUM_SECRET_BYTES:
+        raise RuntimeError("Installation secret is invalid; reinstall the local companion")
+    return encoded

@@ -23,6 +23,7 @@ describe("task-pane initialization", () => {
     resolveOffice?.({ host: "Word", platform: "Mac" })
     await initialization
     expect(readStatus(mount).state).toBe("connected")
+    expect(readStatus(mount).detail).toContain("WordApi 1.3 confirmed")
   })
 
   it("shows unsupported when the host is not Word Desktop", async () => {

@@ -45,7 +45,7 @@ async function connectCompanion(
   try {
     await dependencies.client.bootstrapLocalSession(createBootstrapRequest(info))
     const health = await dependencies.client.getHealth()
-    dependencies.mount(<App status={connectedStatus(health.version)} />)
+    dependencies.mount(<App status={connectedStatus(health.version, info)} />)
   } catch {
     dependencies.mount(<App status={unavailableStatus()} />)
   }
@@ -59,11 +59,14 @@ function createBootstrapRequest(info: OfficeReadyInfo) {
   }
 }
 
-function connectedStatus(version: string): TaskPaneStatus {
+function connectedStatus(version: string, info: OfficeReadyInfo): TaskPaneStatus {
+  const platform = info.platform === "PC" ? "Windows" : "macOS"
   return {
     state: "connected",
     title: "Local companion connected",
-    detail: `Authenticated health check succeeded. Companion ${version}.`,
+    detail:
+      `Office.js ready in Microsoft Word Desktop for ${platform}. ` +
+      `WordApi 1.3 confirmed. Authenticated health succeeded with companion ${version}.`,
   }
 }
 

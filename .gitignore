@@ -7,6 +7,15 @@ taskpane/dist/
 __pycache__/
 *.py[cod]
 *.sqlite3
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+tls-metadata.json
+trusted-root-thumbprint.txt
+.generated-contract-runtime/
 .env
 .env.*
 !.env.example

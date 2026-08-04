@@ -1,0 +1,9 @@
+{
+  "include": ["companion/src", "companion/tests", "scripts"],
+  "exclude": ["**/__pycache__", ".venv", "node_modules", "taskpane/dist"],
+  "extraPaths": ["companion/src", "."],
+  "pythonVersion": "3.12",
+  "venvPath": ".",
+  "venv": ".venv",
+  "typeCheckingMode": "basic"
+}

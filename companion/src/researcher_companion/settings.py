@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-STABLE_HOSTNAME = "word-researcher.localhost"
+STABLE_HOSTNAME = "localhost"
 STABLE_PORT = 4179
 LOOPBACK_ADDRESS = "127.0.0.1"
 

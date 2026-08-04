@@ -2,6 +2,7 @@
   "components": {
     "schemas": {
       "ComponentHealth": {
+        "additionalProperties": false,
         "properties": {
           "contentStore": {
             "const": "ready",
@@ -28,6 +29,7 @@
         "type": "object"
       },
       "ErrorResponse": {
+        "additionalProperties": false,
         "properties": {
           "code": {
             "title": "Code",
@@ -59,6 +61,7 @@
         "type": "object"
       },
       "HealthResponse": {
+        "additionalProperties": false,
         "properties": {
           "components": {
             "$ref": "#/components/schemas/ComponentHealth"
@@ -88,6 +91,7 @@
         "type": "object"
       },
       "SessionBootstrapRequest": {
+        "additionalProperties": false,
         "properties": {
           "officeHost": {
             "const": "Word",
@@ -117,6 +121,7 @@
         "type": "object"
       },
       "SessionBootstrapResponse": {
+        "additionalProperties": false,
         "properties": {
           "csrfToken": {
             "title": "Csrftoken",

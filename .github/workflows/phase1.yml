@@ -3,12 +3,14 @@ name: Phase 1 verification
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  phase1:
+  platform-neutral:
+    name: Platform-neutral checks
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -30,32 +32,140 @@ jobs:
 
       - name: Install locked dependencies
         run: |
-          npm ci --ignore-scripts
-          python -m pip install --disable-pip-version-check --require-hashes -r companion/requirements.lock
+          npm ci
+          python -m venv .venv
+          .venv/bin/python -m pip install --disable-pip-version-check --require-hashes -r companion/requirements.lock
 
-      - name: Verify toolchain and action pins
+      - name: Verify locked toolchains
         run: |
           node -e "if (process.versions.node.split('.')[0] !== '24') process.exit(1)"
           npm run ci:pins
-
-      - name: Verify generated contracts
-        run: npm run generate:check
+          npm run pyright
+          .venv/bin/python -m pip check
 
       - name: Validate Python companion
         run: |
-          python -m ruff check companion/src companion/tests scripts phase1/evidence/tools
-          python -m pytest companion
+          .venv/bin/python -m ruff check companion/src companion/tests scripts phase1/evidence/tools
+          .venv/bin/python -m pytest companion
 
-      - name: Validate and build task pane
+      - name: Validate task pane and architecture
         run: |
-          npm run check
-          npm test
+          npm run lint
+          npm run typecheck
+          npm run test
           npm run build
+          npm run verify:architecture
+          npm run verify:security
+
+      - name: Validate generated contracts
+        run: |
+          npm run verify:generated
+          npm run hashes
 
       - name: Validate Word manifest
         run: npm run validate:manifest
 
-      - name: Run local integration probes
+      - name: Run transport probes
         run: |
-          npm run test:integration
-          npm run test:https
+          npm run test:protocol
+          npm run test:https-bind
+
+  macos-noninteractive:
+    name: macOS noninteractive checks
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Configure Node 24
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Configure Python 3.12
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: companion/requirements.lock
+
+      - name: Install locked dependencies
+        run: |
+          npm ci
+          python -m venv .venv
+          .venv/bin/python -m pip install --disable-pip-version-check --require-hashes -r companion/requirements.lock
+
+      - name: Validate macOS adapters and hostname
+        run: |
+          npm run build
+          .venv/bin/python -m pytest companion
+          .venv/bin/python -c "import ipaddress,socket; addresses={item[4][0] for item in socket.getaddrinfo('localhost',4179,type=socket.SOCK_STREAM)}; assert addresses and all(ipaddress.ip_address(value).is_loopback for value in addresses)"
+          zsh -n installers/macos/install.sh installers/macos/repair.sh installers/macos/uninstall.sh
+          npm run test:https-bind
+
+  windows-noninteractive:
+    name: Windows noninteractive checks
+    runs-on: windows-2025
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Configure Node 24
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Configure Python 3.12
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: companion/requirements.lock
+
+      - name: Install locked dependencies
+        shell: pwsh
+        run: |
+          npm ci
+          python -m venv .venv
+          .\.venv\Scripts\python.exe -m pip install --disable-pip-version-check --require-hashes -r companion/requirements.lock
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module PSScriptAnalyzer -RequiredVersion 1.24.0 -Scope CurrentUser -Force
+
+      - name: Parse and analyze Windows scripts
+        shell: pwsh
+        run: |
+          $scripts = Get-ChildItem installers/windows -Filter *.ps1 -Recurse
+          foreach ($script in $scripts) {
+            $tokens = $null
+            $errors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile($script.FullName, [ref]$tokens, [ref]$errors)
+            if ($errors.Count -gt 0) { $errors | Format-List | Out-String | Write-Error }
+          }
+          $analysis = Invoke-ScriptAnalyzer -Path installers/windows -Recurse -Severity Error,Warning
+          if ($analysis) { $analysis | Format-Table | Out-String | Write-Error }
+
+      - name: Validate locked code and contracts
+        shell: pwsh
+        run: |
+          npm run ci:pins
+          npm run lint
+          npm run typecheck
+          npm run test
+          npm run build
+          npm run pyright
+          npm run verify:architecture
+          npm run verify:security
+          npm run verify:generated
+          npm run hashes
+          npm run validate:manifest
+          .\.venv\Scripts\python.exe -m ruff check companion/src companion/tests scripts phase1/evidence/tools
+          .\.venv\Scripts\python.exe -m pytest companion
+
+      - name: Validate Windows dry-run and isolated lifecycle
+        shell: pwsh
+        run: |
+          ./installers/windows/tests/phase1.tests.ps1 -ProjectRoot $PWD -PythonExecutable (Resolve-Path .\.venv\Scripts\python.exe) -NodeExecutable (Get-Command node).Source -RunLifecycle

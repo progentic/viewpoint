@@ -39,6 +39,17 @@ def test_invalid_bootstrap_is_rejected() -> None:
     assert rejection.value.code == "invalid_bootstrap"
 
 
+def test_bootstrap_replay_is_rejected() -> None:
+    manager, _clock = create_manager()
+    bootstrap = manager.issue_bootstrap()
+    manager.establish(bootstrap.cookie, bootstrap.csrf_token)
+
+    with pytest.raises(SessionRejected) as rejection:
+        manager.establish(bootstrap.cookie, bootstrap.csrf_token)
+
+    assert rejection.value.code == "invalid_bootstrap"
+
+
 def test_expired_session_is_rejected() -> None:
     manager, clock = create_manager()
     bootstrap = manager.issue_bootstrap()
@@ -49,6 +60,35 @@ def test_expired_session_is_rejected() -> None:
         manager.validate(session.cookie, session.csrf_token)
 
     assert rejection.value.code == "expired_session"
+
+
+def test_incorrect_session_csrf_is_rejected() -> None:
+    manager, _clock = create_manager()
+    bootstrap = manager.issue_bootstrap()
+    session = manager.establish(bootstrap.cookie, bootstrap.csrf_token)
+
+    with pytest.raises(SessionRejected) as rejection:
+        manager.validate(session.cookie, "incorrect-csrf")
+
+    assert rejection.value.code == "invalid_session"
+
+
+def test_new_bootstrap_rotates_and_invalidates_previous_session() -> None:
+    manager, _clock = create_manager()
+    first_bootstrap = manager.issue_bootstrap()
+    first_session = manager.establish(first_bootstrap.cookie, first_bootstrap.csrf_token)
+    second_bootstrap = manager.issue_bootstrap()
+
+    second_session = manager.establish(
+        second_bootstrap.cookie,
+        second_bootstrap.csrf_token,
+        first_session.cookie,
+    )
+
+    with pytest.raises(SessionRejected) as rejection:
+        manager.validate(first_session.cookie, first_session.csrf_token)
+    assert rejection.value.code == "invalid_session"
+    manager.validate(second_session.cookie, second_session.csrf_token)
 
 
 def create_manager() -> tuple[LocalSessionManager, MutableClock]:

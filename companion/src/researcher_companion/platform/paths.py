@@ -6,12 +6,12 @@ from researcher_companion.settings import CompanionSettings, LoopbackSettings, R
 
 
 def load_companion_settings() -> CompanionSettings:
-    project_root = Path(__file__).resolve().parents[4]
+    runtime_root = Path(__file__).resolve().parents[4]
     app_data = configured_app_data() or default_app_data()
     return CompanionSettings(
         loopback=LoopbackSettings(),
         session=default_session_settings(),
-        paths=build_runtime_paths(project_root, app_data),
+        paths=build_runtime_paths(runtime_root, app_data),
     )
 
 
@@ -34,13 +34,13 @@ def default_session_settings():
     return SessionSettings()
 
 
-def build_runtime_paths(project_root: Path, app_data: Path) -> RuntimePaths:
+def build_runtime_paths(runtime_root: Path, app_data: Path) -> RuntimePaths:
     return RuntimePaths(
         database=app_data / "state" / "companion.sqlite3",
         content_store=app_data / "content",
-        taskpane_index=project_root / "taskpane" / "dist" / "index.html",
-        taskpane_assets=project_root / "taskpane" / "dist" / "assets",
+        taskpane_index=runtime_root / "taskpane" / "dist" / "index.html",
+        taskpane_assets=runtime_root / "taskpane" / "dist" / "assets",
         certificate=app_data / "tls" / "server-cert.pem",
         private_key=app_data / "tls" / "server-key.pem",
-        migrations=project_root / "companion" / "migrations",
+        migrations=runtime_root / "companion" / "migrations",
     )

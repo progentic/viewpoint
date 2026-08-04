@@ -26,7 +26,7 @@ def parse_arguments() -> argparse.Namespace:
     launch_agent = commands.add_parser("render-launch-agent")
     launch_agent.add_argument("--output", type=Path, required=True)
     launch_agent.add_argument("--python", type=Path, required=True)
-    launch_agent.add_argument("--project-root", type=Path, required=True)
+    launch_agent.add_argument("--runtime-root", type=Path, required=True)
     launch_agent.add_argument("--app-data", type=Path, required=True)
     return parser.parse_args()
 
@@ -71,16 +71,16 @@ def any_material_exists(material: TlsMaterial) -> bool:
 
 
 def render_launch_agent(arguments: argparse.Namespace) -> None:
-    payload = launch_agent_payload(arguments.python, arguments.project_root, arguments.app_data)
+    payload = launch_agent_payload(arguments.python, arguments.runtime_root, arguments.app_data)
     arguments.output.parent.mkdir(parents=True, exist_ok=True)
     with arguments.output.open("wb") as stream:
         plistlib.dump(payload, stream, sort_keys=True)
 
 
-def launch_agent_payload(python: Path, project_root: Path, app_data: Path) -> dict:
+def launch_agent_payload(python: Path, runtime_root: Path, app_data: Path) -> dict:
     return {
         "EnvironmentVariables": {
-            "PYTHONPATH": str(project_root / "companion" / "src"),
+            "PYTHONPATH": str(runtime_root / "companion" / "src"),
             "WORD_RESEARCHER_DATA": str(app_data),
         },
         "KeepAlive": True,
@@ -89,7 +89,7 @@ def launch_agent_payload(python: Path, project_root: Path, app_data: Path) -> di
         "RunAtLoad": True,
         "StandardErrorPath": str(app_data / "logs" / "companion.stderr.log"),
         "StandardOutPath": str(app_data / "logs" / "companion.stdout.log"),
-        "WorkingDirectory": str(project_root),
+        "WorkingDirectory": str(runtime_root),
     }
 
 

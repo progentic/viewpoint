@@ -104,9 +104,11 @@ def typescript_type(schema: dict[str, Any]) -> str:
         return " | ".join(json.dumps(value) for value in schema["enum"])
     if schema.get("type") == "array":
         return f"Array<{typescript_type(schema['items'])}>"
-    return {"boolean": "boolean", "integer": "number", "number": "number", "string": "string"}.get(
-        schema.get("type"), "unknown"
-    )
+    schema_type = schema.get("type")
+    if not isinstance(schema_type, str):
+        return "unknown"
+    types = {"boolean": "boolean", "integer": "number", "number": "number", "string": "string"}
+    return types.get(schema_type, "unknown")
 
 
 def write_text(path: Path, content: str) -> None:

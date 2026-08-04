@@ -26,6 +26,8 @@ remove_registrations() {
 }
 
 remove_phase1_files() {
+  rm -rf "$APP_DATA/runtime/companion" "$APP_DATA/runtime/taskpane"
+  rmdir "$APP_DATA/runtime" 2>/dev/null || true
   rm -f "$APP_DATA/state/companion.sqlite3"
   rm -f "$APP_DATA/tls/root-ca.pem" "$APP_DATA/tls/root-ca-key.pem"
   rm -f "$APP_DATA/tls/server-cert.pem" "$APP_DATA/tls/server-key.pem"

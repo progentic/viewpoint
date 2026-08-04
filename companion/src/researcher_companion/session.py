@@ -57,9 +57,15 @@ class LocalSessionManager:
         cookie = self._encode_challenge(challenge_id, expires_at)
         return BootstrapMaterial(cookie, csrf_token, expires_at)
 
-    def establish(self, challenge_cookie: str | None, csrf_token: str | None) -> SessionMaterial:
+    def establish(
+        self,
+        challenge_cookie: str | None,
+        csrf_token: str | None,
+        previous_session_cookie: str | None = None,
+    ) -> SessionMaterial:
         challenge_id = self._validate_challenge(challenge_cookie)
         self._consume_pending(challenge_id, csrf_token)
+        self._remove_session(previous_session_cookie)
         return self._issue_session()
 
     def validate(self, session_cookie: str | None, csrf_token: str | None) -> None:
@@ -99,6 +105,10 @@ class LocalSessionManager:
         expires_at = self._expiry(self._settings.session_ttl_seconds)
         self._sessions[self._digest(cookie)] = ActiveSession(self._digest(csrf_token), expires_at)
         return SessionMaterial(cookie, csrf_token, expires_at)
+
+    def _remove_session(self, session_cookie: str | None) -> None:
+        if session_cookie is not None:
+            self._sessions.pop(self._digest(session_cookie), None)
 
     def _validate_active_session(
         self,
